@@ -27,6 +27,15 @@ def decompose(obj: dict) -> None:
         run(decompose_service(svc_name, svc, networks))
 
 
+def destroy(obj: dict) -> None:
+    ordered_services = get_ordered_services(obj)
+    if ordered_services:
+        run(["podman", "container", "rm", "-f"] + ordered_services)
+    networks = decompose_networks(obj)
+    if networks:
+        run(["podman", "network", "rm", "-f"] + list(networks.keys()))
+
+
 def decompose_networks(obj) -> dict:
     networks_set = set()
     for name, svc in obj["services"].items():
