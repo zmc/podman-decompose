@@ -20,6 +20,19 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         dest="destroy",
         action="store_true",
     )
+    parser.add_argument(
+        "--build",
+        help="Include commands to build containers (the default)",
+        dest="build",
+        action="store_true",
+        default=True,
+    )
+    parser.add_argument(
+        "--no-build",
+        help="Do not include commands to build containers",
+        dest="build",
+        action="store_false",
+    )
     return parser.parse_args(args)
 
 
@@ -29,7 +42,7 @@ def main():
     if args.destroy:
         destroy(obj)
     else:
-        decompose(obj)
+        decompose(obj, args)
     return 0
 
 

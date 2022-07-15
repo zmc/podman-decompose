@@ -1,6 +1,8 @@
 import logging
+import os
 import secrets
 
+from argparse import Namespace
 from typing import List
 
 from podman_decompose.util import run
@@ -8,13 +10,16 @@ from podman_decompose.util import run
 log = logging.getLogger(__name__)
 
 
-def decompose(obj: dict) -> None:
+def decompose(obj: dict, args: Namespace) -> None:
     networks = decompose_networks(obj)
     for network in networks.values():
         run(network["command"])
     ordered_services = get_ordered_services(obj)
     for svc_name in ordered_services:
         svc = obj["services"][svc_name]
+        build_config = svc.get("build")
+        if build_config and args.build:
+            run(get_build_command(svc_name, svc))
         replicas = svc.get("deploy", dict()).get("replicas", 1)
         if replicas == 0:
             log.warning(f"replicas for service {svc_name} is set to 0; skipping")
@@ -105,4 +110,28 @@ def decompose_service(
     cmd.extend(["--name", indexed_name or name])
     if "image" in obj:
         cmd.append(obj["image"])
+    return cmd
+
+
+def get_build_command(name: str, obj: dict) -> List[str]:
+    cmd = ["podman", "build"]
+    build = obj["build"]
+    if isinstance(build, str):
+        return cmd + [os.path.join(build, "Dockerfile")]
+    args = build.get("args")
+    if args:
+        if isinstance(args, list):
+            for item in args:
+                if "=" not in item:
+                    log.warning(f"Build arg {item} in service {name} has no value!")
+                cmd.extend(["--build-arg", item])
+        elif isinstance(args, dict):
+            for k, v in args.items():
+                cmd.extend(["--build-arg", f"{k}={v}"])
+        else:
+            log.warning(f"Build args for service {name} are malformed: {args}")
+    cmd.extend(["-t", f"{name}:latest"])
+    dockerfile = build.get("dockerfile", "Dockerfile")
+    if dockerfile:
+        cmd.append(os.path.join(build["context"], dockerfile))
     return cmd
