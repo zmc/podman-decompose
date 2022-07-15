@@ -20,6 +20,9 @@ def decompose(obj: dict, args: Namespace) -> None:
         build_config = svc.get("build")
         if build_config and args.build:
             run(get_build_command(svc_name, svc))
+        extends = svc.get("extends", dict()).get("service")
+        if extends is not None:
+            svc = {**obj["services"][extends], **svc}
         replicas = svc.get("deploy", dict()).get("replicas", 1)
         if replicas == 0:
             log.warning(f"replicas for service {svc_name} is set to 0; skipping")
