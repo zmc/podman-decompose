@@ -15,7 +15,8 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         help="The docker-compose file to decompose",
     )
     parser.add_argument(
-        "-d,--destroy",
+        "-d",
+        "--destroy",
         help="Generate commands to destroy, rather than create",
         dest="destroy",
         action="store_true",
@@ -33,6 +34,21 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         dest="build",
         action="store_false",
     )
+    parser.add_argument(
+        "-p",
+        "--pretty",
+        help="Pretty-print generated commands",
+        dest="pretty",
+        action="store_true",
+        default=True,
+    )
+    parser.add_argument(
+        "-c",
+        "--compact",
+        help="Print generated commands without making them pretty",
+        dest="pretty",
+        action="store_false",
+    )
     return parser.parse_args(args)
 
 
@@ -40,7 +56,7 @@ def main():
     args = parse_args(sys.argv[1:])
     obj = read(args.path)
     if args.destroy:
-        destroy(obj)
+        destroy(obj, args)
     else:
         decompose(obj, args)
     return 0

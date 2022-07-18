@@ -10,15 +10,16 @@ log = logging.getLogger(__name__)
 
 
 def decompose(obj: dict, args: Namespace) -> None:
+    pretty = args.pretty
     networks = decompose_networks(obj)
     for network in networks.values():
-        run(network["command"])
+        run(network["command"], pretty)
     ordered_services = get_ordered_services(obj)
     for svc_name in ordered_services:
         svc = obj["services"][svc_name]
         build_config = svc.get("build")
         if build_config and args.build:
-            run(get_build_command(svc_name, svc))
+            run(get_build_command(svc_name, svc), args.pretty)
         extends = svc.get("extends", dict()).get("service")
         if extends is not None:
             svc = {**obj["services"][extends], **svc}
@@ -26,9 +27,12 @@ def decompose(obj: dict, args: Namespace) -> None:
         if replicas > 1:
             for i in range(replicas):
                 svc_name_ = f"{svc_name}_{i}"
-                run(decompose_service(svc_name, svc, networks, indexed_name=svc_name_))
+                run(
+                    decompose_service(svc_name, svc, networks, indexed_name=svc_name_),
+                    args.pretty,
+                )
         elif replicas == 1:
-            run(decompose_service(svc_name, svc, networks))
+            run(decompose_service(svc_name, svc, networks), args.pretty)
 
 
 def get_service_replicas(obj: dict) -> int:
@@ -39,13 +43,13 @@ def get_service_replicas(obj: dict) -> int:
     return replicas
 
 
-def destroy(obj: dict) -> None:
+def destroy(obj: dict, args: Namespace) -> None:
     ordered_services = get_ordered_services(obj)
     if ordered_services:
-        run(["podman", "container", "rm", "-f"] + ordered_services)
+        run(["podman", "container", "rm", "-f"] + ordered_services, args.pretty)
     networks = decompose_networks(obj)
     if networks:
-        run(["podman", "network", "rm", "-f"] + list(networks.keys()))
+        run(["podman", "network", "rm", "-f"] + list(networks.keys()), args.pretty)
 
 
 def decompose_networks(obj) -> dict:
@@ -107,7 +111,7 @@ def decompose_service(
         if "interval" in healthcheck:
             cmd.extend(["--health-interval", healthcheck["interval"]])
         if "retries" in healthcheck:
-            cmd.extend(["--health-retries", healthcheck["retries"]])
+            cmd.extend(["--health-retries", str(healthcheck["retries"])])
         if "timeout" in healthcheck:
             cmd.extend(["--health-timeout", healthcheck["timeout"]])
     if networks:
