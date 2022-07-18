@@ -23,16 +23,21 @@ def decompose(obj: dict, args: Namespace) -> None:
         extends = svc.get("extends", dict()).get("service")
         if extends is not None:
             svc = {**obj["services"][extends], **svc}
-        replicas = svc.get("deploy", dict()).get("replicas", 1)
-        if replicas == 0:
-            log.warning(f"replicas for service {svc_name} is set to 0; skipping")
-            continue
+        replicas = get_service_replicas(svc)
         if replicas > 1:
             for i in range(replicas):
                 svc_name_ = f"{svc_name}_{i}"
                 run(decompose_service(svc_name, svc, networks, indexed_name=svc_name_))
-            continue
-        run(decompose_service(svc_name, svc, networks))
+        elif replicas == 1:
+            run(decompose_service(svc_name, svc, networks))
+
+
+def get_service_replicas(obj: dict) -> int:
+    scale = obj.get("scale")
+    if scale is not None:
+        return scale
+    replicas = obj.get("deploy", dict()).get("replicas", 1)
+    return replicas
 
 
 def destroy(obj: dict) -> None:
