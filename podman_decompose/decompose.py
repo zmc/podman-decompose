@@ -1,6 +1,5 @@
 import logging
 import os
-import secrets
 
 from argparse import Namespace
 from typing import List
@@ -56,7 +55,7 @@ def decompose_networks(obj) -> dict:
             networks_set.add((name,) + tuple(svc["links"]))
     networks = dict()
     for services in networks_set:
-        net_name = secrets.token_hex(4)
+        net_name = "_".join(sorted(services))
         networks[net_name] = dict(
             command=["podman", "network", "create", net_name],
             services=services,
